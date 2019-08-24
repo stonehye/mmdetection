@@ -1,7 +1,6 @@
-import mmcv
-import numpy as np
 import torch
-from torch.nn.modules.utils import _pair
+import numpy as np
+import mmcv
 
 
 def mask_target(pos_proposals_list, pos_assigned_gt_inds_list, gt_masks_list,
@@ -14,7 +13,7 @@ def mask_target(pos_proposals_list, pos_assigned_gt_inds_list, gt_masks_list,
 
 
 def mask_target_single(pos_proposals, pos_assigned_gt_inds, gt_masks, cfg):
-    mask_size = _pair(cfg.mask_size)
+    mask_size = cfg.mask_size
     num_pos = pos_proposals.size(0)
     mask_targets = []
     if num_pos > 0:
@@ -27,12 +26,11 @@ def mask_target_single(pos_proposals, pos_assigned_gt_inds, gt_masks, cfg):
             w = np.maximum(x2 - x1 + 1, 1)
             h = np.maximum(y2 - y1 + 1, 1)
             # mask is uint8 both before and after resizing
-            # mask_size (h, w) to (w, h)
             target = mmcv.imresize(gt_mask[y1:y1 + h, x1:x1 + w],
-                                   mask_size[::-1])
+                                   (mask_size, mask_size))
             mask_targets.append(target)
         mask_targets = torch.from_numpy(np.stack(mask_targets)).float().to(
             pos_proposals.device)
     else:
-        mask_targets = pos_proposals.new_zeros((0, ) + mask_size)
+        mask_targets = pos_proposals.new_zeros((0, mask_size, mask_size))
     return mask_targets

@@ -61,16 +61,14 @@ def build_from_cfg(cfg, registry, default_args=None):
     args = cfg.copy()
     obj_type = args.pop('type')
     if mmcv.is_str(obj_type):
-        obj_cls = registry.get(obj_type)
-        if obj_cls is None:
+        obj_type = registry.get(obj_type)
+        if obj_type is None:
             raise KeyError('{} is not in the {} registry'.format(
                 obj_type, registry.name))
-    elif inspect.isclass(obj_type):
-        obj_cls = obj_type
-    else:
+    elif not inspect.isclass(obj_type):
         raise TypeError('type must be a str or valid type, but got {}'.format(
             type(obj_type)))
     if default_args is not None:
         for name, value in default_args.items():
             args.setdefault(name, value)
-    return obj_cls(**args)
+    return obj_type(**args)

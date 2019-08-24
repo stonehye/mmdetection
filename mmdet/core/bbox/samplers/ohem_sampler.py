@@ -1,7 +1,7 @@
 import torch
 
-from ..transforms import bbox2roi
 from .base_sampler import BaseSampler
+from ..transforms import bbox2roi
 
 
 class OHEMSampler(BaseSampler):

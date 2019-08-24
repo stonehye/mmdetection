@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.cnn.weight_init import caffe2_xavier_init
 from torch.utils.checkpoint import checkpoint
+from mmcv.cnn.weight_init import caffe2_xavier_init
 
-from ..registry import NECKS
 from ..utils import ConvModule
+from ..registry import NECKS
 
 
 @NECKS.register_module
@@ -24,7 +24,6 @@ class HRFPN(nn.Module):
         norm_cfg (dict): dictionary to construct and config norm layer.
         with_cp  (bool): Use checkpoint or not. Using checkpoint will save some
             memory while slowing down the training speed.
-        stride (int): stride of 3x3 convolutional layers
     """
 
     def __init__(self,
@@ -34,8 +33,7 @@ class HRFPN(nn.Module):
                  pooling_type='AVG',
                  conv_cfg=None,
                  norm_cfg=None,
-                 with_cp=False,
-                 stride=1):
+                 with_cp=False):
         super(HRFPN, self).__init__()
         assert isinstance(in_channels, list)
         self.in_channels = in_channels
@@ -61,7 +59,6 @@ class HRFPN(nn.Module):
                     out_channels,
                     kernel_size=3,
                     padding=1,
-                    stride=stride,
                     conv_cfg=self.conv_cfg,
                     activation=None))
 

@@ -80,13 +80,7 @@ def coco_classes():
         'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
         'scissors', 'teddy_bear', 'hair_drier', 'toothbrush'
     ]
-
-
-def cityscapes_classes():
-    return [
-        'person', 'rider', 'car', 'truck', 'bus', 'train', 'motorcycle',
-        'bicycle'
-    ]
+    # return ['person']
 
 
 dataset_aliases = {
@@ -94,8 +88,7 @@ dataset_aliases = {
     'imagenet_det': ['det', 'imagenet_det', 'ilsvrc_det'],
     'imagenet_vid': ['vid', 'imagenet_vid', 'ilsvrc_vid'],
     'coco': ['coco', 'mscoco', 'ms_coco'],
-    'wider_face': ['WIDERFaceDataset', 'wider_face', 'WDIERFace'],
-    'cityscapes': ['cityscapes']
+    'wider_face': ['WIDERFaceDataset', 'wider_face', 'WDIERFace']
 }
 
 

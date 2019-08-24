@@ -3,12 +3,11 @@ import numpy as np
 import pycocotools.mask as mask_util
 import torch
 import torch.nn as nn
-from torch.nn.modules.utils import _pair
 
-from mmdet.core import auto_fp16, force_fp32, mask_target
 from ..builder import build_loss
 from ..registry import HEADS
 from ..utils import ConvModule
+from mmdet.core import mask_target, force_fp32, auto_fp16
 
 
 @HEADS.register_module
@@ -34,8 +33,7 @@ class FCNMaskHead(nn.Module):
                 'Invalid upsample method {}, accepted methods '
                 'are "deconv", "nearest", "bilinear"'.format(upsample_method))
         self.num_convs = num_convs
-        # WARN: roi_feat_size is reserved and not used
-        self.roi_feat_size = _pair(roi_feat_size)
+        self.roi_feat_size = roi_feat_size  # WARN: not used and reserved
         self.in_channels = in_channels
         self.conv_kernel_size = conv_kernel_size
         self.conv_out_channels = conv_out_channels

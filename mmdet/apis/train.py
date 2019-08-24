@@ -1,15 +1,17 @@
 from __future__ import division
+
 import re
 from collections import OrderedDict
 
 import torch
+from mmcv.runner import Runner, DistSamplerSeedHook, obj_from_dict
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import DistSamplerSeedHook, Runner, obj_from_dict
 
 from mmdet import datasets
-from mmdet.core import (CocoDistEvalmAPHook, CocoDistEvalRecallHook,
-                        DistEvalmAPHook, DistOptimizerHook, Fp16OptimizerHook)
-from mmdet.datasets import DATASETS, build_dataloader
+from mmdet.core import (DistOptimizerHook, DistEvalmAPHook,
+                        CocoDistEvalRecallHook, CocoDistEvalmAPHook,
+                        Fp16OptimizerHook)
+from mmdet.datasets import build_dataloader
 from mmdet.models import RPN
 from .env import get_root_logger
 
@@ -136,11 +138,12 @@ def build_optimizer(model, optimizer_cfg):
 
 def _dist_train(model, dataset, cfg, validate=False):
     # prepare data loaders
-    dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
     data_loaders = [
         build_dataloader(
-            ds, cfg.data.imgs_per_gpu, cfg.data.workers_per_gpu, dist=True)
-        for ds in dataset
+            dataset,
+            cfg.data.imgs_per_gpu,
+            cfg.data.workers_per_gpu,
+            dist=True)
     ]
     # put model on gpus
     model = MMDistributedDataParallel(model.cuda())
@@ -171,7 +174,7 @@ def _dist_train(model, dataset, cfg, validate=False):
             runner.register_hook(
                 CocoDistEvalRecallHook(val_dataset_cfg, **eval_cfg))
         else:
-            dataset_type = DATASETS.get(val_dataset_cfg.type)
+            dataset_type = getattr(datasets, val_dataset_cfg.type)
             if issubclass(dataset_type, datasets.CocoDataset):
                 runner.register_hook(
                     CocoDistEvalmAPHook(val_dataset_cfg, **eval_cfg))
@@ -188,14 +191,13 @@ def _dist_train(model, dataset, cfg, validate=False):
 
 def _non_dist_train(model, dataset, cfg, validate=False):
     # prepare data loaders
-    dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
     data_loaders = [
         build_dataloader(
-            ds,
+            dataset,
             cfg.data.imgs_per_gpu,
             cfg.data.workers_per_gpu,
             cfg.gpus,
-            dist=False) for ds in dataset
+            dist=False)
     ]
     # put model on gpus
     model = MMDataParallel(model, device_ids=range(cfg.gpus)).cuda()

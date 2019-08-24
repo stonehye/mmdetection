@@ -42,7 +42,7 @@ class CocoDataset(CustomDataset):
         img_id = self.img_infos[idx]['id']
         ann_ids = self.coco.getAnnIds(imgIds=[img_id])
         ann_info = self.coco.loadAnns(ann_ids)
-        return self._parse_ann_info(self.img_infos[idx], ann_info)
+        return self._parse_ann_info(ann_info, self.with_mask)
 
     def _filter_imgs(self, min_size=32):
         """Filter images too small or without ground truths."""
@@ -55,7 +55,7 @@ class CocoDataset(CustomDataset):
                 valid_inds.append(i)
         return valid_inds
 
-    def _parse_ann_info(self, img_info, ann_info):
+    def _parse_ann_info(self, ann_info, with_mask=True):
         """Parse bbox and mask annotation.
 
         Args:
@@ -64,14 +64,19 @@ class CocoDataset(CustomDataset):
 
         Returns:
             dict: A dict containing the following keys: bboxes, bboxes_ignore,
-                labels, masks, seg_map. "masks" are raw annotations and not
-                decoded into binary masks.
+                labels, masks, mask_polys, poly_lens.
         """
         gt_bboxes = []
         gt_labels = []
         gt_bboxes_ignore = []
-        gt_masks_ann = []
-
+        # Two formats are provided.
+        # 1. mask: a binary map of the same size of the image.
+        # 2. polys: each mask consists of one or several polys, each poly is a
+        # list of float.
+        if with_mask:
+            gt_masks = []
+            gt_mask_polys = []
+            gt_poly_lens = []
         for i, ann in enumerate(ann_info):
             if ann.get('ignore', False):
                 continue
@@ -79,13 +84,19 @@ class CocoDataset(CustomDataset):
             if ann['area'] <= 0 or w < 1 or h < 1:
                 continue
             bbox = [x1, y1, x1 + w - 1, y1 + h - 1]
-            if ann.get('iscrowd', False):
+            if ann['iscrowd']:
                 gt_bboxes_ignore.append(bbox)
             else:
                 gt_bboxes.append(bbox)
                 gt_labels.append(self.cat2label[ann['category_id']])
-                gt_masks_ann.append(ann['segmentation'])
-
+            if with_mask:
+                gt_masks.append(self.coco.annToMask(ann))
+                mask_polys = [
+                    p for p in ann['segmentation'] if len(p) >= 6
+                ]  # valid polygons have >= 3 points (6 coordinates)
+                poly_lens = [len(p) for p in mask_polys]
+                gt_mask_polys.append(mask_polys)
+                gt_poly_lens.extend(poly_lens)
         if gt_bboxes:
             gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
             gt_labels = np.array(gt_labels, dtype=np.int64)
@@ -98,13 +109,12 @@ class CocoDataset(CustomDataset):
         else:
             gt_bboxes_ignore = np.zeros((0, 4), dtype=np.float32)
 
-        seg_map = img_info['filename'].replace('jpg', 'png')
-
         ann = dict(
-            bboxes=gt_bboxes,
-            labels=gt_labels,
-            bboxes_ignore=gt_bboxes_ignore,
-            masks=gt_masks_ann,
-            seg_map=seg_map)
+            bboxes=gt_bboxes, labels=gt_labels, bboxes_ignore=gt_bboxes_ignore)
 
+        if with_mask:
+            ann['masks'] = gt_masks
+            # poly format is not used in the current implementation
+            ann['mask_polys'] = gt_mask_polys
+            ann['poly_lens'] = gt_poly_lens
         return ann
